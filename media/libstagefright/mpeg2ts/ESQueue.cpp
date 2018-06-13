@@ -777,6 +777,11 @@ sp<ABuffer> ElementaryStreamQueue::dequeueAccessUnitAAC() {
         bits.skipBits(2);
 
         unsigned aac_frame_length = bits.getBits(13);
+        if (aac_frame_length == 0){
+            ALOGE("b/62673179, Invalid AAC frame length!");
+            android_errorWriteLog(0x534e4554, "62673179");
+            return NULL;
+        }
 
         bits.skipBits(11);  // adts_buffer_fullness
 
@@ -1258,7 +1263,9 @@ static ssize_t getNextChunkSize(
         const uint8_t *data, size_t size) {
     static const char kStartCode[] = "\x00\x00\x01";
 
-    if (size < 3) {
+    // per ISO/IEC 14496-2 6.2.1, a chunk has a 3-byte prefix + 1-byte start code
+    // we need at least <prefix><start><next prefix> to successfully scan
+    if (size < 3 + 1 + 3) {
         return -EAGAIN;
     }
 
@@ -1266,7 +1273,7 @@ static ssize_t getNextChunkSize(
         return -EAGAIN;
     }
 
-    size_t offset = 3;
+    size_t offset = 4;
     while (offset + 2 < size) {
         if (!memcmp(&data[offset], kStartCode, 3)) {
             return offset;
@@ -1317,6 +1324,9 @@ sp<ABuffer> ElementaryStreamQueue::dequeueAccessUnitMPEG4Video() {
                     state = EXPECT_VISUAL_OBJECT_START;
                 } else {
                     discard = true;
+                    offset += chunkSize;
+                    ALOGW("b/74114680, advance to next chunk");
+                    android_errorWriteLog(0x534e4554, "74114680");
                 }
                 break;
             }
