@@ -145,10 +145,6 @@ private:
 
     int32_t mGeneration;
 
-    int64_t mPrevBufferTimestampUs;
-    bool mIsHFR;
-    int32_t mBatchSize;
-
     DISALLOW_EVIL_CONSTRUCTORS(MediaCodecSource);
 };
 
